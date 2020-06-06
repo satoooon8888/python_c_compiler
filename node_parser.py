@@ -85,18 +85,37 @@ class NodeParser:
 		return node
 
 	def mul(self) -> Node:
-		token: Token = self.tokens.popleft()
-		node: Node = NumNode(self.token_to_num(token))
+		node: Node = self.unary()
 		for _ in range(len(self.tokens)):
 			if self.tokens[0].string in ["*", "/"]:
 				op: str = self.tokens[0].string
 				self.next()
-				token = self.tokens.popleft()
 				kind: NodeKind = op_to_kind(op)
-				num = self.token_to_num(token)
-				node = BinaryNode(kind, node, NumNode(num))
+				node = BinaryNode(kind, node, self.unary())
 			else:
 				return node
+		return node
+
+	def unary(self) -> Node:
+		if self.tokens[0].string == "-":
+			self.next()
+			kind = NodeKind.SUB
+			node = BinaryNode(kind, NumNode(0), self.primary())
+			return node
+		if self.tokens[0].string == "+":
+			self.next()
+		node: Node = self.primary()
+		return node
+
+	def primary(self) -> Node:
+		if self.tokens[0].string == "(":
+			self.next()
+			node = self.expr()
+			self.next()
+		else:
+			num = self.token_to_num(self.tokens[0])
+			self.next()
+			node = NumNode(num)
 		return node
 
 
