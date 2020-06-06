@@ -253,6 +253,4 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/python,intellij+all,windows,git
 
-./tmp*
-./*.o
-./*.s
+tmp*
