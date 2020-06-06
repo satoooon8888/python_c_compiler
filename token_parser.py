@@ -31,7 +31,7 @@ class Token:
 	def __repr__(self) -> str:
 		return f'<class Token({self.kind}, "{self.string}")>'
 
-	def __eq__(self, other) -> bool:
+	def __eq__(self, other: "Token") -> bool:
 		return self.kind == other.kind and self.string == other.string
 
 

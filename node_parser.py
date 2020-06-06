@@ -13,15 +13,22 @@ class NodeKind(enum.Enum):
 
 
 class Node:
-	def __init__(self, kind: NodeKind):
+	def __init__(self, kind: NodeKind) -> None:
 		self.kind: NodeKind = kind
 
 
 class BinaryNode(Node):
-	def __init__(self, kind: NodeKind, lhs: "Node", rhs: "Node"):
+	def __init__(self, kind: NodeKind, lhs: "Node", rhs: "Node") -> None:
 		super().__init__(kind)
 		self.lhs: Node = lhs
 		self.rhs: Node = rhs
+
+	def __eq__(self, other: "BinaryNode") -> bool:
+		return (
+				self.kind == other.kind
+				and self.lhs == other.lhs
+				and self.rhs == other.rhs
+		)
 
 	def __repr__(self) -> str:
 		left = self.lhs.__repr__().replace("\n", "\n ")
@@ -33,11 +40,14 @@ class BinaryNode(Node):
 
 
 class NumNode(Node):
-	def __init__(self, val: int):
+	def __init__(self, val: int) -> None:
 		super().__init__(NodeKind.NUM)
 		self.val: int = val
 
-	def __repr__(self):
+	def __eq__(self, other: "NumNode") -> bool:
+		return self.val == other.val
+
+	def __repr__(self) -> str:
 		return str(self.val)
 
 
