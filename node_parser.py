@@ -47,13 +47,27 @@ class NumNode(Node):
 # unary = ("+" | "-")? primary
 # primary = num | ("(" expr ")")
 
+def op_to_kind(op: str) -> NodeKind:
+	if op == "+":
+		return NodeKind.ADD
+	elif op == "-":
+		return NodeKind.SUB
+	elif op == "*":
+		return NodeKind.MUL
+	elif op == "/":
+		return NodeKind.DIV
+
+
 class NodeParser:
 	def __init__(self, tokens: List[Token]):
 		self.tokens: deque[Token] = deque(tokens)
 
 	@staticmethod
-	def token_to_num(token: Token):
+	def token_to_num(token: Token) -> int:
 		return int(token.string)
+
+	def next(self) -> None:
+		self.tokens.popleft()
 
 	def expr(self) -> Node:
 		return self.add()
@@ -61,15 +75,12 @@ class NodeParser:
 	def add(self) -> Node:
 		node: Node = self.mul()
 		for _ in range(len(self.tokens)):
-			token: Token = self.tokens.popleft()
-			if token.string == "+":
-				kind = NodeKind.ADD
-				node = BinaryNode(kind, node, self.mul())
-			elif token.string == "-":
-				kind = NodeKind.SUB
+			if self.tokens[0].string in ["+", "-"]:
+				op: str = self.tokens[0].string
+				self.next()
+				kind: NodeKind = op_to_kind(op)
 				node = BinaryNode(kind, node, self.mul())
 			else:
-				self.tokens.appendleft(token)
 				return node
 		return node
 
@@ -77,19 +88,14 @@ class NodeParser:
 		token: Token = self.tokens.popleft()
 		node: Node = NumNode(self.token_to_num(token))
 		for _ in range(len(self.tokens)):
-			token = self.tokens.popleft()
-			if token.string == "*":
+			if self.tokens[0].string in ["*", "/"]:
+				op: str = self.tokens[0].string
+				self.next()
 				token = self.tokens.popleft()
-				kind = NodeKind.MUL
-				num = self.token_to_num(token)
-				node = BinaryNode(kind, node, NumNode(num))
-			elif token.string == "/":
-				token = self.tokens.popleft()
-				kind = NodeKind.DIV
+				kind: NodeKind = op_to_kind(op)
 				num = self.token_to_num(token)
 				node = BinaryNode(kind, node, NumNode(num))
 			else:
-				self.tokens.appendleft(token)
 				return node
 		return node
 
