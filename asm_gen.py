@@ -12,6 +12,22 @@ def get_asm(kind: NodeKind):
 	elif kind == NodeKind.DIV:
 		asm += "  cqo\n"
 		asm += "  idiv rdi\n"
+	elif kind == NodeKind.EQ:
+		asm += "cmp rax, rdi\n"
+		asm += "sete al\n"
+		asm += "movzb rax, al\n"
+	elif kind == NodeKind.NE:
+		asm += "cmp rax, rdi\n"
+		asm += "setne al\n"
+		asm += "movzb rax, al\n"
+	elif kind == NodeKind.LT:
+		asm += "cmp rax, rdi\n"
+		asm += "setl al\n"
+		asm += "movzb rax, al\n"
+	elif kind == NodeKind.LE:
+		asm += "cmp rax, rdi\n"
+		asm += "setle al\n"
+		asm += "movzb rax, al\n"
 	asm += "  push rax\n"
 	return asm
 

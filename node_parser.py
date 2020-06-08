@@ -10,6 +10,10 @@ class NodeKind(enum.Enum):
 	SUB = enum.auto()
 	MUL = enum.auto()
 	DIV = enum.auto()
+	EQ = enum.auto()
+	NE = enum.auto()
+	LT = enum.auto()
+	LE = enum.auto()
 
 
 class Node:
@@ -50,13 +54,6 @@ class NumNode(Node):
 	def __repr__(self) -> str:
 		return str(self.val)
 
-
-# expr = add
-# add = mul (("+" | "-") mul)*
-# mul = unary (("*" | "/") unary)*
-# unary = ("+" | "-")? primary
-# primary = num | ("(" expr ")")
-
 def op_to_kind(op: str) -> NodeKind:
 	if op == "+":
 		return NodeKind.ADD
@@ -66,6 +63,14 @@ def op_to_kind(op: str) -> NodeKind:
 		return NodeKind.MUL
 	elif op == "/":
 		return NodeKind.DIV
+	elif op == "==":
+		return NodeKind.EQ
+	elif op == "!=":
+		return NodeKind.NE
+	elif op == ">":
+		return NodeKind.LT
+	elif op == ">=":
+		return NodeKind.LE
 
 
 class NodeParser:
@@ -79,8 +84,44 @@ class NodeParser:
 	def next(self) -> None:
 		self.tokens.popleft()
 
+	# expr = add
+	# equality = relational (("==" | "!=") relational)*
+	# relational = add (("<" | "<=" | ">" | ">=") add)*
+	# add = mul (("+" | "-") mul)*
+	# mul = unary (("*" | "/") unary)*
+	# unary = ("+" | "-")? primary
+	# primary = num | ("(" expr ")")
 	def expr(self) -> Node:
-		return self.add()
+		return self.equality()
+
+	def equality(self) -> Node:
+		node: Node = self.relational()
+		for _ in range(len(self.tokens)):
+			if self.tokens[0].string in ["==", "!="]:
+				op: str = self.tokens[0].string
+				self.next()
+				kind: NodeKind = op_to_kind(op)
+				node = BinaryNode(kind, node, self.relational())
+			else:
+				return node
+		return node
+
+	def relational(self) -> Node:
+		node: Node = self.add()
+		for _ in range(len(self.tokens)):
+			if self.tokens[0].string in [">", ">="]:
+				op: str = self.tokens[0].string.replace("<", ">")
+				self.next()
+				kind: NodeKind = op_to_kind(op)
+				node = BinaryNode(kind, self.add(), node)
+			elif self.tokens[0].string in ["<", "<="]:
+				op: str = self.tokens[0].string.replace("<", ">")
+				self.next()
+				kind: NodeKind = op_to_kind(op)
+				node = BinaryNode(kind, node, self.add())
+			else:
+				return node
+		return node
 
 	def add(self) -> Node:
 		node: Node = self.mul()
