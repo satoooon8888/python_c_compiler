@@ -7,7 +7,12 @@ def executed_exit_code(source: str):
 	asm: str = gen_asm(source)
 	with open("./tmp.s", "w") as f:
 		f.write(asm)
-	proc = subprocess.run("ubuntu run \"gcc ./tmp.s -o ./tmp && ./tmp; echo $?\"", shell=True, stdout=subprocess.PIPE)
+	if os.name == "nt":
+		proc = subprocess.run("ubuntu run \"gcc ./tmp.s -o ./tmp && ./tmp; echo $?\"", shell=True, stdout=subprocess.PIPE)
+	elif os.name == "posix":
+		proc = subprocess.run("gcc ./tmp.s -o ./tmp && ./tmp; echo $?", shell=True, stdout=subprocess.PIPE)
+	else:
+		raise EnvironmentError("This OS don't support.")
 	result: int = int(proc.stdout.decode())
 	os.remove("./tmp")
 	os.remove("./tmp.s")
