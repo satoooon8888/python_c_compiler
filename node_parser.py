@@ -30,11 +30,7 @@ class BinaryNode(Node):
 		self.rhs: Node = rhs
 
 	def __eq__(self, other: "BinaryNode") -> bool:
-		return (
-				self.kind == other.kind
-				and self.lhs == other.lhs
-				and self.rhs == other.rhs
-		)
+		return self.__dict__ == other.__dict__
 
 	def __repr__(self) -> str:
 		left = self.lhs.__repr__().replace("\n", "\n ")
@@ -51,7 +47,7 @@ class NumNode(Node):
 		self.val: int = val
 
 	def __eq__(self, other: "NumNode") -> bool:
-		return self.val == other.val
+		return self.__dict__ == other.__dict__
 
 	def __repr__(self) -> str:
 		return str(self.val)
@@ -63,7 +59,7 @@ class LocalVarNode(Node):
 		self.offset: int = offset
 
 	def __eq__(self, other: "LocalVarNode") -> bool:
-		return self.offset == other.offset
+		return self.__dict__ == other.__dict__
 
 	def __repr__(self) -> str:
 		return f"[ebp - {self.offset:x}]"
@@ -93,12 +89,11 @@ class NodeParser:
 		self.tokens: deque[Token] = deque(tokens)
 		self.code: List[Node] = []
 
-	@staticmethod
-	def token_to_num(token: Token) -> int:
-		return int(token.string)
-
 	def next(self) -> None:
 		self.tokens.popleft()
+	
+	def current(self) -> Token:
+		return self.tokens[0]
 
 	# program = stmt*
 	# stmt = expr ";"
@@ -112,13 +107,13 @@ class NodeParser:
 	# primary = num | ident | ("(" expr ")")
 
 	def program(self) -> List[Node]:
-		while self.tokens[0].kind != TokenKind.EOF:
+		while self.current().kind != TokenKind.EOF:
 			self.code.append(self.stmt())
 		return self.code
 
 	def stmt(self) -> Node:
 		node: Node = self.expr()
-		if self.tokens[0].string == ";":
+		if self.current().string == ";":
 			self.next()
 		return node
 
@@ -127,7 +122,7 @@ class NodeParser:
 
 	def assign(self) -> Node:
 		node: Node = self.equality()
-		if self.tokens[0].string == "=":
+		if self.current().string == "=":
 			kind = NodeKind.ASSIGN
 			self.next()
 			node = BinaryNode(kind, node, self.assign())
@@ -136,8 +131,8 @@ class NodeParser:
 	def equality(self) -> Node:
 		node: Node = self.relational()
 		for _ in range(len(self.tokens)):
-			if self.tokens[0].string in ["==", "!="]:
-				op: str = self.tokens[0].string
+			if self.current().string in ["==", "!="]:
+				op: str = self.current().string
 				self.next()
 				kind: NodeKind = op_to_kind(op)
 				node = BinaryNode(kind, node, self.relational())
@@ -148,13 +143,13 @@ class NodeParser:
 	def relational(self) -> Node:
 		node: Node = self.add()
 		for _ in range(len(self.tokens)):
-			if self.tokens[0].string in [">", ">="]:
-				op: str = self.tokens[0].string.replace("<", ">")
+			if self.current().string in [">", ">="]:
+				op = self.current().string
 				self.next()
 				kind: NodeKind = op_to_kind(op)
 				node = BinaryNode(kind, self.add(), node)
-			elif self.tokens[0].string in ["<", "<="]:
-				op: str = self.tokens[0].string.replace("<", ">")
+			elif self.current().string in ["<", "<="]:
+				op: str = self.current().string.replace("<", ">")
 				self.next()
 				kind: NodeKind = op_to_kind(op)
 				node = BinaryNode(kind, node, self.add())
@@ -165,8 +160,8 @@ class NodeParser:
 	def add(self) -> Node:
 		node: Node = self.mul()
 		for _ in range(len(self.tokens)):
-			if self.tokens[0].string in ["+", "-"]:
-				op: str = self.tokens[0].string
+			if self.current().string in ["+", "-"]:
+				op: str = self.current().string
 				self.next()
 				kind: NodeKind = op_to_kind(op)
 				node = BinaryNode(kind, node, self.mul())
@@ -177,8 +172,8 @@ class NodeParser:
 	def mul(self) -> Node:
 		node: Node = self.unary()
 		for _ in range(len(self.tokens)):
-			if self.tokens[0].string in ["*", "/"]:
-				op: str = self.tokens[0].string
+			if self.current().string in ["*", "/"]:
+				op: str = self.current().string
 				self.next()
 				kind: NodeKind = op_to_kind(op)
 				node = BinaryNode(kind, node, self.unary())
@@ -187,28 +182,28 @@ class NodeParser:
 		return node
 
 	def unary(self) -> Node:
-		if self.tokens[0].string == "-":
+		if self.current().string == "-":
 			self.next()
 			kind = NodeKind.SUB
 			node = BinaryNode(kind, NumNode(0), self.primary())
 			return node
-		if self.tokens[0].string == "+":
+		if self.current().string == "+":
 			self.next()
 		node: Node = self.primary()
 		return node
 
 	def primary(self) -> Node:
-		if self.tokens[0].string == "(":
+		if self.current().string == "(":
 			self.next()
 			node: Node = self.expr()
 			self.next()
 		else:
-			if self.tokens[0].kind == TokenKind.NUM:
-				num: int = self.token_to_num(self.tokens[0])
+			if self.current().kind == TokenKind.NUM:
+				num: int = int(self.current().string)
 				self.next()
 				node = NumNode(num)
-			elif self.tokens[0].kind == TokenKind.IDENT:
-				name: str = self.tokens[0].string
+			elif self.current().kind == TokenKind.IDENT:
+				name: str = self.current().string
 				offset: int = (ord(name) - ord("a") + 1) * 8
 				self.next()
 				node = LocalVarNode(offset)

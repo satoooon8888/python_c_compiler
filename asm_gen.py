@@ -2,7 +2,7 @@ from node_parser import NodeKind, Node, NumNode, BinaryNode, LocalVarNode
 from typing import List
 
 
-def gen_lvar_asm(node: Node) -> str:
+def gen_lvar_addr(node: Node) -> str:
 	asm = ""
 	if not isinstance(node, LocalVarNode):
 		raise Exception()
@@ -12,7 +12,7 @@ def gen_lvar_asm(node: Node) -> str:
 	return asm
 
 
-def gen_asm(kind: NodeKind) -> str:
+def gen_op_code(kind: NodeKind) -> str:
 	asm = ""
 	if kind == NodeKind.ADD:
 		asm += "  add rax, rdi\n"
@@ -49,7 +49,7 @@ def gen(node: Node) -> str:
 		code += f"  push {node.val}\n"
 		return code
 	if node.kind == NodeKind.LVAR:
-		code += gen_lvar_asm(node)
+		code += gen_lvar_addr(node)
 		code += "  pop rax\n"
 		code += "  mov rax, [rax]\n"
 		code += "  push rax\n"
@@ -60,7 +60,7 @@ def gen(node: Node) -> str:
 		raise Exception()
 
 	if node.kind == NodeKind.ASSIGN:
-		code += gen_lvar_asm(node.lhs)
+		code += gen_lvar_addr(node.lhs)
 		code += gen(node.rhs)
 		code += "  pop rdi\n"
 		code += "  pop rax\n"
@@ -72,7 +72,7 @@ def gen(node: Node) -> str:
 	code += gen(node.rhs)
 	code += "  pop rdi\n"
 	code += "  pop rax\n"
-	code += gen_asm(node.kind)
+	code += gen_op_code(node.kind)
 	return code
 
 

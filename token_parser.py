@@ -33,7 +33,7 @@ class Token:
 		return f'<class Token({self.kind}, "{self.string}")>'
 
 	def __eq__(self, other: "Token") -> bool:
-		return self.kind == other.kind and self.string == other.string
+		return self.__dict__ == other.__dict__
 
 
 def startswith(cmp_str: str, cmp: str) -> bool:
