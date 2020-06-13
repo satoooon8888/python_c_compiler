@@ -1,6 +1,6 @@
 import enum
 from token_parser import Token, TokenKind
-from typing import List
+from typing import List, Dict
 from collections import deque
 
 
@@ -88,6 +88,8 @@ class NodeParser:
 	def __init__(self, tokens: List[Token]):
 		self.tokens: deque[Token] = deque(tokens)
 		self.code: List[Node] = []
+		self.local_vars: Dict[str, int] = {}
+		self.max_local_var_offset: int = 0
 
 	def next(self) -> None:
 		self.tokens.popleft()
@@ -204,8 +206,13 @@ class NodeParser:
 				node = NumNode(num)
 			elif self.current().kind == TokenKind.IDENT:
 				name: str = self.current().string
-				offset: int = (ord(name) - ord("a") + 1) * 8
 				self.next()
+				if name in self.local_vars:
+					offset: int = self.local_vars[name]
+				else:
+					self.max_local_var_offset += 8
+					offset: int = self.max_local_var_offset
+					self.local_vars[name] = offset
 				node = LocalVarNode(offset)
 			else:
 				# TODO: impl error

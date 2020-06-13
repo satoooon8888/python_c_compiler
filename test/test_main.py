@@ -66,3 +66,11 @@ def test_main():
 	assert_asm("z = 1", 1)
 	assert_asm("a = 1; a", 1)
 	assert_asm("a = 1; b = a + 1; a + b", 3)
+
+	assert_asm("foo = 1", 1)
+	assert_asm("foo = 1; bar = foo + 1", 2)
+	assert_asm("hoge = 1; fuga = 2; hoge + fuga", 3)
+	assert_asm("_azAZ09_ = 1", 1)
+
+
+

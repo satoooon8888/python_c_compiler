@@ -40,6 +40,25 @@ def startswith(cmp_str: str, cmp: str) -> bool:
 	return cmp_str[:len(cmp)] == cmp
 
 
+def is_allowed_var_char(char: str):
+	# A-Z a-z 0-9 _
+	return (
+			"A" <= char <= "Z"
+			or "a" <= char <= "z"
+			or "0" <= char <= "9"
+			or char == "_"
+	)
+
+
+def is_allowed_first_var_char(char: str):
+	# A-Z a-z 0-9 _
+	return (
+			"A" <= char <= "Z"
+			or "a" <= char <= "z"
+			or char == "_"
+	)
+
+
 def tokenize(input_str: str) -> List[Token]:
 	padding = [" ", "	"]
 	tokens: List[Token] = []
@@ -51,7 +70,7 @@ def tokenize(input_str: str) -> List[Token]:
 			i += 1
 			continue
 
-		if input_str[i:i+2] in ["==", "!=", "<=", ">="]:
+		if input_str[i:i + 2] in ["==", "!=", "<=", ">="]:
 			kind = TokenKind.RESERVED
 			token_str = input_str[i:i + 2]
 			tokens.append(Token(kind, token_str))
@@ -74,10 +93,13 @@ def tokenize(input_str: str) -> List[Token]:
 			tokens.append(Token(kind, token_str))
 			continue
 
-		if "a" <= input_str[i] <= "z":
+		if is_allowed_first_var_char(input_str[i]):
 			kind = TokenKind.IDENT
-			tokens.append(Token(kind, input_str[i]))
-			i += 1
+			token_str = ""
+			while i < len(input_str) and is_allowed_var_char(input_str[i]):
+				token_str += input_str[i]
+				i += 1
+			tokens.append(Token(kind, token_str))
 			continue
 
 		error_at(i, 1, input_str, "トークナイズできません", InvalidTokenError())
