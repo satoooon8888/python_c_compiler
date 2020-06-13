@@ -16,8 +16,9 @@ def error_at(index: int, length: int, source: str, message: str, error: Exceptio
 
 class TokenKind(enum.Enum):
 	RESERVED = enum.auto()  # 記号
-	NUM = enum.auto()
-	EOF = enum.auto()
+	IDENT = enum.auto()  # 識別子（変数）
+	NUM = enum.auto()  # 数値
+	EOF = enum.auto()  # プログラムの終端
 
 
 class Token:
@@ -71,6 +72,12 @@ def tokenize(input_str: str) -> List[Token]:
 				token_str += input_str[i]
 				i += 1
 			tokens.append(Token(kind, token_str))
+			continue
+
+		if "a" <= input_str[i] <= "z":
+			kind = TokenKind.IDENT
+			tokens.append(Token(kind, input_str[i]))
+			i += 1
 			continue
 
 		error_at(i, 1, input_str, "トークナイズできません", InvalidTokenError())

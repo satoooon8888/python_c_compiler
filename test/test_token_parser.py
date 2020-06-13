@@ -11,3 +11,12 @@ def test_parser():
 		Token(TokenKind.EOF, "")
 	]
 	assert tokenize(testing) == result
+
+	testing = "a + 2"
+	result = [
+		Token(TokenKind.IDENT, "a"),
+		Token(TokenKind.RESERVED, "+"),
+		Token(TokenKind.NUM, "2"),
+		Token(TokenKind.EOF, "")
+	]
+	assert tokenize(testing) == result
