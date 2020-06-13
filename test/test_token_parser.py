@@ -29,3 +29,14 @@ def test_parser():
 		Token(TokenKind.EOF, "")
 	]
 	assert tokenize(testing) == result
+
+	testing = "a = 1; a"
+	result = [
+		Token(TokenKind.IDENT, "a"),
+		Token(TokenKind.RESERVED, "="),
+		Token(TokenKind.NUM, "1"),
+		Token(TokenKind.RESERVED, ";"),
+		Token(TokenKind.IDENT, "a"),
+		Token(TokenKind.EOF, "")
+	]
+	assert tokenize(testing) == result

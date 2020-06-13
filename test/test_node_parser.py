@@ -25,6 +25,7 @@ def test_node_parser():
 		)
 	)
 	assert node_parse(testing)[0] == result
+
 	testing = tokenize("a = 1")
 	result = BinaryNode(
 		NodeKind.ASSIGN,
@@ -32,3 +33,14 @@ def test_node_parser():
 		NumNode(1)
 	)
 	assert node_parse(testing)[0] == result
+
+	testing = tokenize("a = 1; a")
+	result = [
+		BinaryNode(
+			NodeKind.ASSIGN,
+			LocalVarNode(8),
+			NumNode(1)
+		),
+		LocalVarNode(8)
+	]
+	assert node_parse(testing) == result

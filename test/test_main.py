@@ -61,3 +61,8 @@ def test_main():
 
 	assert_asm("(1+2*3) - 6 == 1 < 1 - -1", 1)
 	assert_asm("1 > 2 == 2 < 1", 1)
+
+	assert_asm("a = 1", 1)
+	assert_asm("z = 1", 1)
+	assert_asm("a = 1; a", 1)
+	assert_asm("a = 1; b = a + 1; a + b", 3)
