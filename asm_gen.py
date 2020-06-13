@@ -1,4 +1,5 @@
 from node_parser import NodeKind, Node, NumNode, BinaryNode
+from typing import List
 
 
 def get_asm(kind: NodeKind):
@@ -48,12 +49,13 @@ def gen(node: Node) -> str:
 	return code
 
 
-def code_gen(node: Node) -> str:
+def code_gen(nodes: List[Node]) -> str:
 	code = ""
 	code += ".intel_syntax noprefix\n"
 	code += ".global main\n"
 	code += "main: \n"
-	code += gen(node)
+	for node in nodes:
+		code += gen(node)
 	code += "  pop rax\n"
 	code += "  ret\n"
 	return code

@@ -1,11 +1,13 @@
 import enum
-from token_parser import Token
+from token_parser import Token, TokenKind
 from typing import List
 from collections import deque
 
 
 class NodeKind(enum.Enum):
 	NUM = enum.auto()
+	LVAR = enum.auto()  # ローカル変数
+	ASSIGN = enum.auto()  # =
 	ADD = enum.auto()
 	SUB = enum.auto()
 	MUL = enum.auto()
@@ -54,6 +56,19 @@ class NumNode(Node):
 	def __repr__(self) -> str:
 		return str(self.val)
 
+
+class LocalVarNode(Node):
+	def __init__(self, offset: int) -> None:
+		super().__init__(NodeKind.LVAR)
+		self.offset: int = offset
+
+	def __eq__(self, other: "LocalVarNode") -> bool:
+		return self.offset == other.offset
+
+	def __repr__(self) -> str:
+		return f"[ebp - {self.offset:x}]"
+
+
 def op_to_kind(op: str) -> NodeKind:
 	if op == "+":
 		return NodeKind.ADD
@@ -76,6 +91,7 @@ def op_to_kind(op: str) -> NodeKind:
 class NodeParser:
 	def __init__(self, tokens: List[Token]):
 		self.tokens: deque[Token] = deque(tokens)
+		self.code: List[Node] = []
 
 	@staticmethod
 	def token_to_num(token: Token) -> int:
@@ -84,15 +100,38 @@ class NodeParser:
 	def next(self) -> None:
 		self.tokens.popleft()
 
-	# expr = add
+	# program = stmt*
+	# stmt = expr ";"
+	# expr = assign
+	# assign = equality ("=" assign)?
 	# equality = relational (("==" | "!=") relational)*
 	# relational = add (("<" | "<=" | ">" | ">=") add)*
 	# add = mul (("+" | "-") mul)*
 	# mul = unary (("*" | "/") unary)*
 	# unary = ("+" | "-")? primary
-	# primary = num | ("(" expr ")")
+	# primary = num | ident | ("(" expr ")")
+
+	def program(self) -> List[Node]:
+		while self.tokens[0].kind != TokenKind.EOF:
+			self.code.append(self.stmt())
+		return self.code
+
+	def stmt(self) -> Node:
+		node: Node = self.expr()
+		if self.tokens[0].string == ";":
+			self.next()
+		return node
+
 	def expr(self) -> Node:
-		return self.equality()
+		return self.assign()
+
+	def assign(self) -> Node:
+		node: Node = self.equality()
+		if self.tokens[0].string == "=":
+			kind = NodeKind.ASSIGN
+			self.next()
+			node = BinaryNode(kind, node, self.assign())
+		return node
 
 	def equality(self) -> Node:
 		node: Node = self.relational()
@@ -161,15 +200,25 @@ class NodeParser:
 	def primary(self) -> Node:
 		if self.tokens[0].string == "(":
 			self.next()
-			node = self.expr()
+			node: Node = self.expr()
 			self.next()
 		else:
-			num = self.token_to_num(self.tokens[0])
-			self.next()
-			node = NumNode(num)
+			if self.tokens[0].kind == TokenKind.NUM:
+				num: int = self.token_to_num(self.tokens[0])
+				self.next()
+				node = NumNode(num)
+			elif self.tokens[0].kind == TokenKind.IDENT:
+				name: str = self.tokens[0].string
+				offset: int = (ord(name) - ord("a") + 1) * 8
+				self.next()
+				node = LocalVarNode(offset)
+			else:
+				# TODO: impl error
+				print(self.tokens)
+				raise Exception()
 		return node
 
 
-def node_parse(tokens: List[Token]) -> Node:
+def node_parse(tokens: List[Token]) -> List[Node]:
 	parser: NodeParser = NodeParser(tokens)
-	return parser.expr()
+	return parser.program()

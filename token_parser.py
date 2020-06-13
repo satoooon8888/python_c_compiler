@@ -58,7 +58,7 @@ def tokenize(input_str: str) -> List[Token]:
 			i += 2
 			continue
 
-		if input_str[i] in "+-*/()<>":
+		if input_str[i] in "+-*/()<>=":
 			kind = TokenKind.RESERVED
 			token_str = input_str[i]
 			tokens.append(Token(kind, token_str))
