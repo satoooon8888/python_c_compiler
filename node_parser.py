@@ -1,5 +1,5 @@
 import enum
-from token_parser import Token, TokenKind
+from token_parser import Token, TokenKind, error_token
 from typing import List, Dict
 from collections import deque
 
@@ -85,7 +85,8 @@ def op_to_kind(op: str) -> NodeKind:
 
 
 class NodeParser:
-	def __init__(self, tokens: List[Token]):
+	def __init__(self, tokens: List[Token], source: str):
+		self.source: str = source
 		self.tokens: deque[Token] = deque(tokens)
 		self.code: List[Node] = []
 		self.local_vars: Dict[str, int] = {}
@@ -215,12 +216,12 @@ class NodeParser:
 					self.local_vars[name] = offset
 				node = LocalVarNode(offset)
 			else:
-				# TODO: impl error
-				print(self.tokens)
+				error_token(self.current(), self.source, "不正な文です。")
+				# 前の関数で例外が投げられるはずだが、IDEが反応してくれないのでここでも投げる
 				raise Exception()
 		return node
 
 
-def node_parse(tokens: List[Token]) -> List[Node]:
-	parser: NodeParser = NodeParser(tokens)
+def node_parse(tokens: List[Token], source: str) -> List[Node]:
+	parser: NodeParser = NodeParser(tokens, source)
 	return parser.program()
