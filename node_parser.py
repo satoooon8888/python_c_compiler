@@ -16,6 +16,7 @@ class NodeKind(enum.Enum):
 	NE = enum.auto()
 	LT = enum.auto()
 	LE = enum.auto()
+	RETURN = enum.auto()
 
 
 class Node:
@@ -66,6 +67,20 @@ class LocalVarNode(Node):
 		return f"[ebp - {self.offset:x}] {self.token}"
 
 
+class OneChildNode(Node):
+	def __init__(self, kind: NodeKind, token: Token, child: Node):
+		super().__init__(kind, token)
+		self.child = child
+
+	def __eq__(self, other):
+		return self.__dict__ == other.__dict__
+
+	def __repr__(self) -> str:
+		tree: str = f"({self.kind}) {self.token}"
+		tree += f" {self.child}"
+		return tree
+
+
 def op_to_kind(op: str) -> NodeKind:
 	if op == "+":
 		return NodeKind.ADD
@@ -101,6 +116,7 @@ class NodeParser:
 
 	# program = stmt*
 	# stmt = expr ";"
+	#        | "return" expr ;
 	# expr = assign
 	# assign = equality ("=" assign)?
 	# equality = relational (("==" | "!=") relational)*
@@ -116,7 +132,12 @@ class NodeParser:
 		return self.code
 
 	def stmt(self) -> Node:
-		node: Node = self.expr()
+		if self.current().kind == TokenKind.RETURN:
+			token: Token = self.current()
+			self.next()
+			node: Node = OneChildNode(NodeKind.RETURN, token, self.expr())
+		else:
+			node: Node = self.expr()
 		if self.current().string == ";":
 			self.next()
 		else:

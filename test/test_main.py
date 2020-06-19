@@ -72,5 +72,8 @@ def test_main():
 	assert_asm("hoge = 1; fuga = 2; hoge + fuga;", 3)
 	assert_asm("_azAZ09_ = 1;", 1)
 
+	assert_asm("foo = 0xef; return foo + 16;", 255)
+	assert_asm("1; return 2; 3;", 2)
+
 
 

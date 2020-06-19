@@ -1,4 +1,4 @@
-from node_parser import NodeKind, Node, NumNode, BinaryNode, LocalVarNode, Function
+from node_parser import NodeKind, Node, NumNode, BinaryNode, LocalVarNode, Function, OneChildNode
 from token_parser import error_token
 from typing import List
 
@@ -49,14 +49,26 @@ class AssemblyGenerator:
 
 	def gen(self, node: Node) -> str:
 		asm = ""
+
 		if isinstance(node, NumNode):
 			asm += f"  push {node.val}\n"
 			return asm
+
 		if node.kind == NodeKind.LVAR:
 			asm += self.gen_lvar_addr(node)
 			asm += "  pop rax\n"
 			asm += "  mov rax, [rax]\n"
 			asm += "  push rax\n"
+			return asm
+
+		if node.kind == NodeKind.RETURN:
+			if not isinstance(node, OneChildNode):
+				error_token(node.token, self.source, "RETURNトークンがOneChildNode型でありません。")
+			asm += self.gen(node.child)
+			asm += "  pop rax\n"
+			asm += "  mov rsp, rbp\n"
+			asm += "  pop rbp\n"
+			asm += "  ret\n"
 			return asm
 
 		if not isinstance(node, BinaryNode):
