@@ -1,25 +1,49 @@
 import enum
-from typing import List
+from typing import List, Optional
+
+# 長い記号から順に
+reserved_symbol = [
+	"==",
+	"!=",
+	"<=",
+	">=",
+	"<",
+	">",
+	"+",
+	"-",
+	"*",
+	"/",
+	"=",
+	"(",
+	")",
+	";"
+]
+
+reserved_word = [
+	"return"
+]
+
+padding = [" ", "	", "\n"]
 
 
 class TokenKind(enum.Enum):
 	RESERVED = enum.auto()  # 記号
 	IDENT = enum.auto()  # 識別子（変数）
 	NUM = enum.auto()  # 数値
+	RETURN = enum.auto()  # return文
 	EOF = enum.auto()  # プログラムの終端
 	INVALID = enum.auto()  # エラーの際に使う
 
 
 class Token:
-	def __init__(self, kind: TokenKind, string: str, column: int, row: int) -> None:
+	def __init__(self, kind: TokenKind, string: str, index: int) -> None:
 		self.kind: TokenKind = kind
 		self.string: str = string
-		self.column: int = column
-		self.row: int = row
+		self.index: int = index
 
 	def __str__(self) -> str:
 		kind: str = str(self.kind).split(".")[1]
-		return f'<class Token {kind} \"{self.string}\" {self.column}:{self.row}>'
+		return f'<class Token {kind} \"{self.string}\" {self.index}>'
 
 	def __repr__(self) -> str:
 		return self.__str__()
@@ -29,10 +53,19 @@ class Token:
 
 
 def error_token(token: Token, source: str, message: str) -> None:
-	error_with_place(token.column, token.row, len(token.string), source, message)
+	error_with_place(token.index, len(token.string), source, message)
 
 
-def error_with_place(column: int, row: int, length: int, source: str, message: str) -> None:
+def error_with_place(index: int, length: int, source: str, message: str) -> None:
+	column: int = 0
+	row: int = 0
+	for i, si in enumerate(source):
+		if i == index:
+			break
+		row += 1
+		if si == "\n":
+			column += 1
+			row = 0
 	info: str = f"line {column + 1} | "
 	print(info + source.split("\n")[column])
 	padding_length: int = len(info) + row
@@ -41,8 +74,11 @@ def error_with_place(column: int, row: int, length: int, source: str, message: s
 	exit(1)
 
 
-def startswith(cmp_str: str, cmp: str) -> bool:
-	return cmp_str[:len(cmp)] == cmp
+def match_with_words(cmp: str, search_words: List) -> Optional[str]:
+	for word in search_words:
+		if cmp[:len(word)] == word:
+			return word
+	return None
 
 
 def is_allowed_var_char(char: str):
@@ -68,61 +104,74 @@ def tokenize(input_str: str) -> List[Token]:
 	tokens: List[Token] = []
 
 	i: int = 0
-	# 0-indexed
-	column: int = 0
-	row: int = 0
-	# 行の最初の文字のiを保存しておく
-	column_start_index: int = 0
-	# 上から文字列が長い順に
 	while i < len(input_str):
-		row = i - column_start_index
-		if input_str[i] == "\n":
-			column += 1
-			i += 1
-			column_start_index = i
-			continue
 
-		if input_str[i] in [" ", "	"]:
+		match_string = match_with_words(input_str[i:], padding)
+		if match_string is not None:
 			i += 1
 			continue
 
-		if input_str[i:i + 2] in ["==", "!=", "<=", ">="]:
+		match_string = match_with_words(input_str[i:], reserved_symbol)
+		if match_string is not None:
 			kind = TokenKind.RESERVED
-			token_str = input_str[i:i + 2]
-			tokens.append(Token(kind, token_str, column, row))
-			i += 2
-			continue
-
-		if input_str[i] in "+-*/()<>=;":
-			kind = TokenKind.RESERVED
-			token_str = input_str[i]
-			tokens.append(Token(kind, token_str, column, row))
-			i += 1
+			token_str = match_string
+			tokens.append(Token(kind, token_str, i))
+			i += len(match_string)
 			continue
 
 		if input_str[i].isdigit():
 			kind = TokenKind.NUM
 			token_str = ""
-			while i < len(input_str) and input_str[i].isdigit():
+			allowed_num_string = "0123456789"
+			base = 10
+			match_base = match_with_words(input_str[i:], ["0x", "0b", "0o"])
+			token_index: int = i
+			if match_base is not None:
+				i += 2
+				if match_base == "0x":
+					allowed_num_string = "0123456789abcdef"
+					base = 16
+				elif match_base == "0b":
+					allowed_num_string = "01"
+					base = 2
+				elif match_base == "0o":
+					allowed_num_string = "01234567"
+					base = 8
+			while i < len(input_str) and input_str[i] in allowed_num_string:
 				token_str += input_str[i]
 				i += 1
-			tokens.append(Token(kind, token_str, column, row))
+			if token_str == "":
+				error_with_place(i, 1, input_str, "無効な数値です。")
+			token_str = str(int(token_str, base))
+			tokens.append(Token(kind, token_str, token_index))
+			continue
+
+		match_string = match_with_words(input_str[i:], reserved_word)
+		if match_string is not None:
+			if match_string == "return":
+				kind = TokenKind.RETURN
+			else:
+				error_with_place(i, len(match_string), input_str, "予約語が実装されていません。")
+				raise Exception()
+			token_str = match_string
+			tokens.append(Token(kind, token_str, i))
+			i += len(token_str)
 			continue
 
 		if is_allowed_first_var_char(input_str[i]):
 			kind = TokenKind.IDENT
 			token_str = ""
+			token_index: int = i
 			while i < len(input_str) and is_allowed_var_char(input_str[i]):
 				token_str += input_str[i]
 				i += 1
-			tokens.append(Token(kind, token_str, column, row))
+			tokens.append(Token(kind, token_str, token_index))
 			continue
 
-		error_with_place(column, row, 1, input_str, "解釈できません")
+		error_with_place(i, 1, input_str, "解釈できません")
 
 	kind = TokenKind.EOF
 	token_str = ""
-	row += 1
-	tokens.append(Token(kind, token_str, column, row))
+	tokens.append(Token(kind, token_str, i))
 
 	return tokens
