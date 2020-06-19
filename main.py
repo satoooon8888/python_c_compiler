@@ -1,18 +1,18 @@
 import sys
 from token_parser import tokenize
 from node_parser import node_parse
-from asm_gen import code_gen
+from asm_gen import asm_gen
 
 
-def gen_asm(source: str) -> str:
+def compile_source(source: str) -> str:
 	tokens = tokenize(source)
 	nodes = node_parse(tokens, source)
-	return code_gen(nodes)
+	return asm_gen([nodes], source)
 
 
 def main() -> None:
 	source = sys.argv[1]
-	print(gen_asm(source))
+	print(compile_source(source))
 
 
 if __name__ == '__main__':

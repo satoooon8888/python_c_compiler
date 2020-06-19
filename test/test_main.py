@@ -1,10 +1,10 @@
 import subprocess
-from main import gen_asm
+from main import compile_source
 import os
 
 
 def executed_exit_code(source: str):
-	asm: str = gen_asm(source)
+	asm: str = compile_source(source)
 	with open("./tmp.s", "w") as f:
 		f.write(asm)
 	if os.name == "nt":

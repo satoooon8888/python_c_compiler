@@ -3,44 +3,55 @@ from token_parser import tokenize
 
 
 def test_node_parser():
-	assert NumNode(1) == NumNode(1)
-	assert LocalVarNode(0) == LocalVarNode(0)
-	assert BinaryNode(NodeKind.ADD, NumNode(0), NumNode(0)) == BinaryNode(NodeKind.ADD, NumNode(0), NumNode(0))
-	testing = tokenize("2 * (3 - 1) + -2")
-	result = BinaryNode(
+	null_token: Token = Token(TokenKind.INVALID, "", 0, 0)
+	assert NumNode(1, null_token) == NumNode(1, null_token)
+	assert LocalVarNode(0, null_token) == LocalVarNode(0, null_token)
+	assert BinaryNode(NodeKind.ADD, null_token, NumNode(0, null_token), NumNode(0, null_token)) \
+		== BinaryNode(NodeKind.ADD, null_token, NumNode(0, null_token), NumNode(0, null_token))
+	source = "2 * (3 - 1) + -2"
+	testing = tokenize(source)
+	result = [BinaryNode(
 		NodeKind.ADD,
+		Token(TokenKind.RESERVED, "+", 0, 12),
 		BinaryNode(
 			NodeKind.MUL,
-			NumNode(2),
+			Token(TokenKind.RESERVED, "*", 0, 2),
+			NumNode(2, Token(TokenKind.NUM, "2", 0, 0)),
 			BinaryNode(
 				NodeKind.SUB,
-				NumNode(3),
-				NumNode(1)
-			)
+				Token(TokenKind.RESERVED, "-", 0, 7),
+				NumNode(3, Token(TokenKind.NUM, "3", 0, 5)),
+				NumNode(1, Token(TokenKind.NUM, "1", 0, 9)),
+			),
 		),
 		BinaryNode(
 			NodeKind.SUB,
-			NumNode(0),
-			NumNode(2)
-		)
-	)
-	assert node_parse(testing)[0] == result
+			Token(TokenKind.RESERVED, "-", 0, 14),
+			NumNode(0, Token(TokenKind.RESERVED, "-", 0, 14)),
+			NumNode(2, Token(TokenKind.NUM, "2", 0, 15)),
+		),
+	)]
+	assert node_parse(testing, source).nodes == result
 
-	testing = tokenize("a = 1")
-	result = BinaryNode(
+	source = "a = 1"
+	testing = tokenize(source)
+	result = [BinaryNode(
 		NodeKind.ASSIGN,
-		LocalVarNode(8),
-		NumNode(1)
-	)
-	assert node_parse(testing)[0] == result
+		Token(TokenKind.RESERVED, "=", 0, 2),
+		LocalVarNode(8, Token(TokenKind.IDENT, "a", 0, 0)),
+		NumNode(1, Token(TokenKind.NUM, "1", 0, 4))
+	)]
+	assert node_parse(testing, source).nodes == result
 
-	testing = tokenize("a = 1; a")
+	source = "a = 1; a"
+	testing = tokenize(source)
 	result = [
 		BinaryNode(
 			NodeKind.ASSIGN,
-			LocalVarNode(8),
-			NumNode(1)
+			Token(TokenKind.RESERVED, "=", 0, 2),
+			LocalVarNode(8, Token(TokenKind.IDENT, "a", 0, 0)),
+			NumNode(1, Token(TokenKind.NUM, "1", 0, 4))
 		),
-		LocalVarNode(8)
+		LocalVarNode(8, Token(TokenKind.IDENT, "a", 0, 7))
 	]
-	assert node_parse(testing) == result
+	assert node_parse(testing, source).nodes == result

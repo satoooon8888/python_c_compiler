@@ -118,7 +118,7 @@ def tokenize(input_str: str) -> List[Token]:
 			tokens.append(Token(kind, token_str, column, row))
 			continue
 
-		error_with_place(column, row, 1, input_str, "トークナイズできません")
+		error_with_place(column, row, 1, input_str, "解釈できません")
 
 	kind = TokenKind.EOF
 	token_str = ""

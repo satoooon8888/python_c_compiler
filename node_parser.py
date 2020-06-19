@@ -19,13 +19,14 @@ class NodeKind(enum.Enum):
 
 
 class Node:
-	def __init__(self, kind: NodeKind) -> None:
+	def __init__(self, kind: NodeKind, token: Token) -> None:
 		self.kind: NodeKind = kind
+		self.token: Token = token
 
 
 class BinaryNode(Node):
-	def __init__(self, kind: NodeKind, lhs: "Node", rhs: "Node") -> None:
-		super().__init__(kind)
+	def __init__(self, kind: NodeKind, token: Token, lhs: "Node", rhs: "Node") -> None:
+		super().__init__(kind, token)
 		self.lhs: Node = lhs
 		self.rhs: Node = rhs
 
@@ -35,34 +36,34 @@ class BinaryNode(Node):
 	def __repr__(self) -> str:
 		left = self.lhs.__repr__().replace("\n", "\n ")
 		right = self.rhs.__repr__().replace("\n", "\n ")
-		tree: str = f"({self.kind})\n"
+		tree: str = f"({self.kind}) {self.token}\n"
 		tree += f" {left}\n"
 		tree += f" {right}"
 		return tree
 
 
 class NumNode(Node):
-	def __init__(self, val: int) -> None:
-		super().__init__(NodeKind.NUM)
+	def __init__(self, val: int, token: Token) -> None:
+		super().__init__(NodeKind.NUM, token)
 		self.val: int = val
 
 	def __eq__(self, other: "NumNode") -> bool:
 		return self.__dict__ == other.__dict__
 
 	def __repr__(self) -> str:
-		return str(self.val)
+		return f"{self.val} {self.token}"
 
 
 class LocalVarNode(Node):
-	def __init__(self, offset: int) -> None:
-		super().__init__(NodeKind.LVAR)
+	def __init__(self, offset: int, token: Token) -> None:
+		super().__init__(NodeKind.LVAR, token)
 		self.offset: int = offset
 
 	def __eq__(self, other: "LocalVarNode") -> bool:
 		return self.__dict__ == other.__dict__
 
 	def __repr__(self) -> str:
-		return f"[ebp - {self.offset:x}]"
+		return f"[ebp - {self.offset:x}] {self.token}"
 
 
 def op_to_kind(op: str) -> NodeKind:
@@ -89,12 +90,12 @@ class NodeParser:
 		self.source: str = source
 		self.tokens: deque[Token] = deque(tokens)
 		self.code: List[Node] = []
-		self.local_vars: Dict[str, int] = {}
+		self.lvar_offsets: Dict[str, int] = {}
 		self.max_local_var_offset: int = 0
 
 	def next(self) -> None:
 		self.tokens.popleft()
-	
+
 	def current(self) -> Token:
 		return self.tokens[0]
 
@@ -126,19 +127,21 @@ class NodeParser:
 	def assign(self) -> Node:
 		node: Node = self.equality()
 		if self.current().string == "=":
-			kind = NodeKind.ASSIGN
+			token: Token = self.current()
+			kind: NodeKind = NodeKind.ASSIGN
 			self.next()
-			node = BinaryNode(kind, node, self.assign())
+			node = BinaryNode(kind, token, node, self.assign())
 		return node
 
 	def equality(self) -> Node:
 		node: Node = self.relational()
 		for _ in range(len(self.tokens)):
 			if self.current().string in ["==", "!="]:
+				token: Token = self.current()
 				op: str = self.current().string
-				self.next()
 				kind: NodeKind = op_to_kind(op)
-				node = BinaryNode(kind, node, self.relational())
+				self.next()
+				node = BinaryNode(kind, token, node, self.relational())
 			else:
 				return node
 		return node
@@ -147,15 +150,17 @@ class NodeParser:
 		node: Node = self.add()
 		for _ in range(len(self.tokens)):
 			if self.current().string in [">", ">="]:
+				token: Token = self.current()
 				op = self.current().string
-				self.next()
 				kind: NodeKind = op_to_kind(op)
-				node = BinaryNode(kind, self.add(), node)
+				self.next()
+				node = BinaryNode(kind, token, self.add(), node)
 			elif self.current().string in ["<", "<="]:
+				token: Token = self.current()
 				op: str = self.current().string.replace("<", ">")
-				self.next()
 				kind: NodeKind = op_to_kind(op)
-				node = BinaryNode(kind, node, self.add())
+				self.next()
+				node = BinaryNode(kind, token, node, self.add())
 			else:
 				return node
 		return node
@@ -164,10 +169,11 @@ class NodeParser:
 		node: Node = self.mul()
 		for _ in range(len(self.tokens)):
 			if self.current().string in ["+", "-"]:
+				token: Token = self.current()
 				op: str = self.current().string
-				self.next()
 				kind: NodeKind = op_to_kind(op)
-				node = BinaryNode(kind, node, self.mul())
+				self.next()
+				node = BinaryNode(kind, token, node, self.mul())
 			else:
 				return node
 		return node
@@ -176,19 +182,21 @@ class NodeParser:
 		node: Node = self.unary()
 		for _ in range(len(self.tokens)):
 			if self.current().string in ["*", "/"]:
+				token: Token = self.current()
 				op: str = self.current().string
-				self.next()
 				kind: NodeKind = op_to_kind(op)
-				node = BinaryNode(kind, node, self.unary())
+				self.next()
+				node = BinaryNode(kind, token, node, self.unary())
 			else:
 				return node
 		return node
 
 	def unary(self) -> Node:
 		if self.current().string == "-":
-			self.next()
+			token: Token = self.current()
 			kind = NodeKind.SUB
-			node = BinaryNode(kind, NumNode(0), self.primary())
+			self.next()
+			node = BinaryNode(kind, token, NumNode(0, token), self.primary())
 			return node
 		if self.current().string == "+":
 			self.next()
@@ -202,19 +210,21 @@ class NodeParser:
 			self.next()
 		else:
 			if self.current().kind == TokenKind.NUM:
+				token: Token = self.current()
 				num: int = int(self.current().string)
 				self.next()
-				node = NumNode(num)
+				node = NumNode(num, token)
 			elif self.current().kind == TokenKind.IDENT:
+				token: Token = self.current()
 				name: str = self.current().string
-				self.next()
-				if name in self.local_vars:
-					offset: int = self.local_vars[name]
+				if name in self.lvar_offsets:
+					offset: int = self.lvar_offsets[name]
 				else:
 					self.max_local_var_offset += 8
 					offset: int = self.max_local_var_offset
-					self.local_vars[name] = offset
-				node = LocalVarNode(offset)
+					self.lvar_offsets[name] = offset
+				self.next()
+				node = LocalVarNode(offset, token)
 			else:
 				error_token(self.current(), self.source, "不正な文です。")
 				# 前の関数で例外が投げられるはずだが、IDEが反応してくれないのでここでも投げる
@@ -222,6 +232,15 @@ class NodeParser:
 		return node
 
 
-def node_parse(tokens: List[Token], source: str) -> List[Node]:
+class Function:
+	def __init__(self, name: str, nodes: List[Node], local_vars: Dict[str, int]):
+		self.name = name
+		self.nodes: List[Node] = nodes
+		self.lvar_offsets: Dict[str, int] = local_vars
+
+
+def node_parse(tokens: List[Token], source: str) -> Function:
 	parser: NodeParser = NodeParser(tokens, source)
-	return parser.program()
+	nodes: List[Node] = parser.program()
+	function = Function("main", nodes, parser.lvar_offsets)
+	return function
