@@ -119,6 +119,8 @@ class NodeParser:
 		node: Node = self.expr()
 		if self.current().string == ";":
 			self.next()
+		else:
+			error_token(self.current(), self.source, ";が行末にありません")
 		return node
 
 	def expr(self) -> Node:
