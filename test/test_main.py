@@ -1,5 +1,6 @@
 import subprocess
 from main import compile_source
+from functools import reduce
 import os
 
 
@@ -84,3 +85,19 @@ def test_main():
 	assert_asm("foo = 0; while (0) foo = 1; return foo;", 0)
 
 	assert_asm("sum = 0; for (i = 1; i <= 10; i = i + 1) sum = sum + i; return sum;", 55)
+
+	result = sum([i for i in range(0, 11)]) + reduce(lambda a, b: a * b, [i for i in range(0, 11)])
+	assert_asm("""
+	sum = 0;
+	smul = 0;
+	for (i = 0; i <= 10; i = i + 1) {
+		sum = sum + i;
+		smul = smul * i;
+	}
+	return sum + smul;
+	""", result)
+	assert_asm("a = 0;{} return a;", 0)
+	assert_asm("i = 0; for (;;) {if (i >= 5) return i; i = i + 1;} return 0;", 5)
+
+
+

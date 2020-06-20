@@ -16,6 +16,7 @@ class NodeKind(enum.Enum):
 	NE = enum.auto()
 	LT = enum.auto()
 	LE = enum.auto()
+	BLOCK = enum.auto()  # ブロック ("{}")
 	RETURN = enum.auto()
 	IF = enum.auto()
 	WHILE = enum.auto()
@@ -158,6 +159,24 @@ class ForNode(Node):
 		tree += f" {inc}\n"
 		tree += ")\n"
 		tree += f" {loop}"
+		return tree
+
+
+class BlockNode(Node):
+	def __init__(self, token: Token, nodes: List[Node]):
+		super().__init__(NodeKind.BLOCK, token)
+		self.nodes: List[Node] = nodes
+
+	def __eq__(self, other: "LocalVarNode") -> bool:
+		return self.__dict__ == other.__dict__
+
+	def __repr__(self) -> str:
+		tree: str = ""
+		tree += f"{self.token} {{"
+		for node in self.nodes:
+			node_tree = node.__repr__().replace("\n", "\n ")
+			tree += f" {node_tree}\n"
+		tree += "}\n"
 		return tree
 
 
@@ -306,6 +325,16 @@ class NodeParser:
 			loop_node: Node = self.stmt()
 
 			node: Node = ForNode(token, init, conditions, inc, loop_node)
+			return node
+
+		if self.is_current("{"):
+			token: Token = self.current()
+			self.next()
+			nodes: List[Node] = []
+			while not self.is_current("}"):
+				nodes.append(self.stmt())
+			self.next()
+			node: Node = BlockNode(token, nodes)
 			return node
 
 		node: Node = self.expr()
