@@ -22,7 +22,8 @@ reserved_operator = [
 reserved_word = [
 	"return",
 	"if",
-	"else"
+	"else",
+	"while",
 ]
 
 padding = [" ", "	", "\n"]
@@ -38,6 +39,7 @@ class TokenKind(enum.Enum):
 	RETURN = enum.auto()
 	IF = enum.auto()
 	ELSE = enum.auto()
+	WHILE = enum.auto()
 
 
 class Token:
@@ -112,6 +114,8 @@ def reserved_word_to_kind(word: str) -> Optional[TokenKind]:
 		return TokenKind.IF
 	if word == "else":
 		return TokenKind.ELSE
+	if word == "while":
+		return TokenKind.WHILE
 	return None
 
 

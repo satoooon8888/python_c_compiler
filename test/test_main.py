@@ -79,6 +79,6 @@ def test_main():
 	assert_asm("if (1 == 1) foo = 1; else foo = 2; return foo;", 1)
 	assert_asm("if (1 != 1) foo = 1; else foo = 2; return foo;", 2)
 
-
-
-
+	assert_asm("foo = 0; while (foo < 5) foo = foo + 1; return foo;", 5)
+	assert_asm("foo = 10; while (foo > 0) foo = foo - 1; return foo;", 0)
+	assert_asm("foo = 0; while (0) foo = 1; return foo;", 0)

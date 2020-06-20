@@ -1,4 +1,4 @@
-from node_parser import NodeKind, Node, NumNode, BinaryNode, LocalVarNode, Function, ReturnNode, IfNode
+from node_parser import NodeKind, Node, NumNode, BinaryNode, LocalVarNode, Function, ReturnNode, IfNode, WhileNode
 from token_parser import error_token
 from typing import List
 
@@ -86,6 +86,20 @@ class AssemblyGenerator:
 				asm += f"{else_label}:\n"
 				asm += self.gen(node.else_node)
 				asm += f"{end_label}:\n"
+			return asm
+
+		if node.kind == NodeKind.WHILE:
+			if not isinstance(node, WhileNode):
+				error_token(node.token, self.source, "WhileトークンがWhileNode型でありません。")
+			begin_label = self.create_label("L.begin_while")
+			end_label = self.create_label("L.end_while")
+			asm += f"{begin_label}:\n"
+			asm += self.gen(node.conditions)
+			asm += f"  cmp rax, 0\n"
+			asm += f"  je {end_label}\n"
+			asm += self.gen(node.loop_node)
+			asm += f"  jmp {begin_label}\n"
+			asm += f"{end_label}:\n"
 			return asm
 
 		if not isinstance(node, BinaryNode):

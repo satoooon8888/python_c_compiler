@@ -18,6 +18,7 @@ class NodeKind(enum.Enum):
 	LE = enum.auto()
 	RETURN = enum.auto()
 	IF = enum.auto()
+	WHILE = enum.auto()
 
 
 class Node:
@@ -108,6 +109,27 @@ class IfNode(Node):
 		return tree
 
 
+class WhileNode(Node):
+	def __init__(self, token: Token, conditions: Node, loop_node: Node) -> None:
+		super().__init__(NodeKind.WHILE, token)
+		self.conditions: Node = conditions
+		self.loop_node: Node = loop_node
+		self.token: Token = token
+
+	def __eq__(self, other: "LocalVarNode") -> bool:
+		return self.__dict__ == other.__dict__
+
+	def __repr__(self) -> str:
+		loop = self.loop_node.__repr__().replace("\n", "\n ")
+		tree: str = ""
+		tree += f"{self.token}"
+		tree += f"IF (\n"
+		tree += f"  {self.conditions}\n"
+		tree += ")\n"
+		tree += f" {loop}\n"
+		return tree
+
+
 def op_to_kind(op: str) -> NodeKind:
 	if op == "+":
 		return NodeKind.ADD
@@ -151,6 +173,7 @@ class NodeParser:
 	# stmt = expr ";"
 	#        | "return" expr ";"
 	#        | "if" "(" expr ")" stmt ("else" stmt)?
+	#        | "while" "(" expr ")" stmt
 	# expr = assign
 	# assign = equality ("=" assign)?
 	# equality = relational (("==" | "!=") relational)*
@@ -187,6 +210,19 @@ class NodeParser:
 			else:
 				else_node: Optional[Node] = None
 			node: Node = IfNode(token, conditions, if_node, else_node)
+			return node
+		elif self.current().kind == TokenKind.WHILE:
+			token: Token = self.current()
+			self.next()
+			if not self.is_current("("):
+				self.error("不正な条件式です。")
+			self.next()
+			conditions: Node = self.expr()
+			if not self.is_current(")"):
+				self.error("不正な条件式です。")
+			self.next()
+			loop_node: Node = self.stmt()
+			node: Node = WhileNode(token, conditions, loop_node)
 			return node
 		else:
 			node: Node = self.expr()
