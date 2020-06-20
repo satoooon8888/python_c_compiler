@@ -82,3 +82,5 @@ def test_main():
 	assert_asm("foo = 0; while (foo < 5) foo = foo + 1; return foo;", 5)
 	assert_asm("foo = 10; while (foo > 0) foo = foo - 1; return foo;", 0)
 	assert_asm("foo = 0; while (0) foo = 1; return foo;", 0)
+
+	assert_asm("sum = 0; for (i = 1; i <= 10; i = i + 1) sum = sum + i; return sum;", 55)

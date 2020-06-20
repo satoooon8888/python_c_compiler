@@ -19,6 +19,7 @@ class NodeKind(enum.Enum):
 	RETURN = enum.auto()
 	IF = enum.auto()
 	WHILE = enum.auto()
+	FOR = enum.auto()
 
 
 class Node:
@@ -130,6 +131,34 @@ class WhileNode(Node):
 		return tree
 
 
+class ForNode(Node):
+	def __init__(self, token: Token, init: Optional[Node], condition: Optional[Node], inc: Optional[Node],
+				 loop_node: Node) -> None:
+		super().__init__(NodeKind.FOR, token)
+		self.init = init
+		self.conditions = condition
+		self.inc = inc
+		self.loop_node = loop_node
+
+	def __eq__(self, other: "LocalVarNode") -> bool:
+		return self.__dict__ == other.__dict__
+
+	def __repr__(self) -> str:
+		init = self.init.__repr__().replace("\n", "\n ")
+		cond = self.conditions.__repr__().replace("\n", "\n ")
+		inc = self.inc.__repr__().replace("\n", "\n ")
+		loop = self.loop_node.__repr__().replace("\n", "\n ")
+		tree = ""
+		tree += f"{self.token}"
+		tree += f"FOR ("
+		tree += f" {init} ;\n"
+		tree += f" {cond} ;\n"
+		tree += f" {inc}\n"
+		tree += ")\n"
+		tree += f" {loop}"
+		return tree
+
+
 def op_to_kind(op: str) -> NodeKind:
 	if op == "+":
 		return NodeKind.ADD
@@ -174,6 +203,7 @@ class NodeParser:
 	#        | "return" expr ";"
 	#        | "if" "(" expr ")" stmt ("else" stmt)?
 	#        | "while" "(" expr ")" stmt
+	#        | "for" "(" expr? ";" expr? ";" expr? ")" stmt
 	# expr = assign
 	# assign = equality ("=" assign)?
 	# equality = relational (("==" | "!=") relational)*
@@ -223,6 +253,36 @@ class NodeParser:
 			self.next()
 			loop_node: Node = self.stmt()
 			node: Node = WhileNode(token, conditions, loop_node)
+			return node
+		elif self.current().kind == TokenKind.FOR:
+			token: Token = self.current()
+			self.next()
+			if not self.is_current("("):
+				self.error("不正な条件式です。")
+			self.next()
+			if not self.is_current(";"):
+				init: Optional[Node] = self.expr()
+			else:
+				init = None
+			if not self.is_current(";"):
+				self.error("不正な文です。")
+			self.next()
+			if not self.is_current(";"):
+				condition: Optional[Node] = self.expr()
+			else:
+				condition = None
+			if not self.is_current(";"):
+				self.error("不正な文です。")
+			self.next()
+			if not self.is_current(")"):
+				inc: Optional[Node] = self.expr()
+			else:
+				inc = None
+			if not self.is_current(")"):
+				self.error("不正な条件式です。")
+			self.next()
+			loop_node: Node = self.stmt()
+			node: Node = ForNode(token, init, condition, inc, loop_node)
 			return node
 		else:
 			node: Node = self.expr()

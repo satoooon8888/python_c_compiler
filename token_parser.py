@@ -24,6 +24,7 @@ reserved_word = [
 	"if",
 	"else",
 	"while",
+	"for",
 ]
 
 padding = [" ", "	", "\n"]
@@ -40,6 +41,21 @@ class TokenKind(enum.Enum):
 	IF = enum.auto()
 	ELSE = enum.auto()
 	WHILE = enum.auto()
+	FOR = enum.auto()
+
+
+def reserved_word_to_kind(word: str) -> Optional[TokenKind]:
+	if word == "return":
+		return TokenKind.RETURN
+	if word == "if":
+		return TokenKind.IF
+	if word == "else":
+		return TokenKind.ELSE
+	if word == "while":
+		return TokenKind.WHILE
+	if word == "for":
+		return TokenKind.FOR
+	return None
 
 
 class Token:
@@ -105,18 +121,6 @@ def is_allowed_first_var_char(char: str):
 			or "a" <= char <= "z"
 			or char == "_"
 	)
-
-
-def reserved_word_to_kind(word: str) -> Optional[TokenKind]:
-	if word == "return":
-		return TokenKind.RETURN
-	if word == "if":
-		return TokenKind.IF
-	if word == "else":
-		return TokenKind.ELSE
-	if word == "while":
-		return TokenKind.WHILE
-	return None
 
 
 def tokenize(source: str) -> List[Token]:
