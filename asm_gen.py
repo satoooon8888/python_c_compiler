@@ -108,13 +108,16 @@ class AssemblyGenerator:
 				error_token(node.token, self.source, "WhileトークンがWhileNode型でありません。")
 			begin_label = self.create_label("L.begin_for")
 			end_label = self.create_label("L.end_for")
-			asm += self.gen(node.init)
+			if node.init is not None:
+				asm += self.gen(node.init)
 			asm += f"{begin_label}:\n"
-			asm += self.gen(node.conditions)
-			asm += f"  cmp rax, 0\n"
-			asm += f"  je {end_label}\n"
+			if node.conditions is not None:
+				asm += self.gen(node.conditions)
+				asm += f"  cmp rax, 0\n"
+				asm += f"  je {end_label}\n"
 			asm += self.gen(node.loop_node)
-			asm += self.gen(node.inc)
+			if node.inc is not None:
+				asm += self.gen(node.inc)
 			asm += f"  jmp {begin_label}\n"
 			asm += f"{end_label}:\n"
 			return asm
