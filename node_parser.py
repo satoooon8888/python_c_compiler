@@ -228,62 +228,91 @@ class NodeParser:
 		if self.current().kind == TokenKind.RETURN:
 			token: Token = self.current()
 			self.next()
+
 			node: Node = ReturnNode(token, self.expr())
-		elif self.current().kind == TokenKind.IF:
+
+			self.check_syntax(";", ";が行末にありません")
+			self.next()
+
+			return node
+
+		if self.current().kind == TokenKind.IF:
 			token: Token = self.current()
 			self.next()
+
 			self.check_syntax("(", "不正な条件式です。")
 			self.next()
+
 			conditions: Node = self.expr()
+
 			self.check_syntax(")", "不正な条件式です。")
 			self.next()
+
 			if_node: Node = self.stmt()
+
+			else_node: Optional[Node] = None
 			if self.current().kind == TokenKind.ELSE:
 				self.next()
-				else_node: Node = self.stmt()
-			else:
-				else_node: Optional[Node] = None
+				else_node = self.stmt()
+
 			node: Node = IfNode(token, conditions, if_node, else_node)
 			return node
-		elif self.current().kind == TokenKind.WHILE:
+
+		if self.current().kind == TokenKind.WHILE:
 			token: Token = self.current()
 			self.next()
+
 			self.check_syntax("(", "不正な条件式です。")
 			self.next()
+
 			conditions: Node = self.expr()
+
 			self.check_syntax(")", "不正な条件式です。")
 			self.next()
+
 			loop_node: Node = self.stmt()
+
 			node: Node = WhileNode(token, conditions, loop_node)
 			return node
-		elif self.current().kind == TokenKind.FOR:
+
+		if self.current().kind == TokenKind.FOR:
 			token: Token = self.current()
 			self.next()
+
 			self.check_syntax("(", "不正な条件式です。")
 			self.next()
+
 			init: Optional[Node] = None
 			if not self.is_current(";"):
 				init = self.expr()
+
 			self.check_syntax(";", "不正な文です。")
 			self.next()
+
 			conditions: Optional[Node] = None
 			if not self.is_current(";"):
 				conditions = self.expr()
+
 			self.check_syntax(";", "不正な文です。")
 			self.next()
+
 			inc: Optional[Node] = None
 			if not self.is_current(")"):
 				inc = self.expr()
+
 			self.check_syntax(")", "不正な条件式です。")
 			self.next()
+
 			loop_node: Node = self.stmt()
+
 			node: Node = ForNode(token, init, conditions, inc, loop_node)
 			return node
-		else:
-			node: Node = self.expr()
+
+		node: Node = self.expr()
 
 		self.check_syntax(";", ";が行末にありません")
 		self.next()
+
 		return node
 
 	def expr(self) -> Node:
@@ -293,8 +322,8 @@ class NodeParser:
 		node: Node = self.equality()
 		if self.is_current("="):
 			token: Token = self.current()
-			kind: NodeKind = NodeKind.ASSIGN
 			self.next()
+			kind: NodeKind = NodeKind.ASSIGN
 			node = BinaryNode(kind, token, node, self.assign())
 		return node
 
@@ -303,9 +332,9 @@ class NodeParser:
 		for _ in range(len(self.tokens)):
 			if self.current().string in ["==", "!="]:
 				token: Token = self.current()
-				op: str = self.current().string
-				kind: NodeKind = op_to_kind(op)
 				self.next()
+				op: str = token.string
+				kind: NodeKind = op_to_kind(op)
 				node = BinaryNode(kind, token, node, self.relational())
 			else:
 				return node
@@ -316,15 +345,15 @@ class NodeParser:
 		for _ in range(len(self.tokens)):
 			if self.current().string in [">", ">="]:
 				token: Token = self.current()
-				op = self.current().string
-				kind: NodeKind = op_to_kind(op)
 				self.next()
+				op = token.string
+				kind: NodeKind = op_to_kind(op)
 				node = BinaryNode(kind, token, self.add(), node)
 			elif self.current().string in ["<", "<="]:
 				token: Token = self.current()
-				op: str = self.current().string.replace("<", ">")
-				kind: NodeKind = op_to_kind(op)
 				self.next()
+				op: str = token.string.replace("<", ">")
+				kind: NodeKind = op_to_kind(op)
 				node = BinaryNode(kind, token, node, self.add())
 			else:
 				return node
@@ -335,9 +364,9 @@ class NodeParser:
 		for _ in range(len(self.tokens)):
 			if self.current().string in ["+", "-"]:
 				token: Token = self.current()
-				op: str = self.current().string
-				kind: NodeKind = op_to_kind(op)
 				self.next()
+				op: str = token.string
+				kind: NodeKind = op_to_kind(op)
 				node = BinaryNode(kind, token, node, self.mul())
 			else:
 				return node
@@ -348,9 +377,9 @@ class NodeParser:
 		for _ in range(len(self.tokens)):
 			if self.current().string in ["*", "/"]:
 				token: Token = self.current()
-				op: str = self.current().string
-				kind: NodeKind = op_to_kind(op)
 				self.next()
+				op: str = token.string
+				kind: NodeKind = op_to_kind(op)
 				node = BinaryNode(kind, token, node, self.unary())
 			else:
 				return node
@@ -359,8 +388,8 @@ class NodeParser:
 	def unary(self) -> Node:
 		if self.is_current("-"):
 			token: Token = self.current()
-			kind = NodeKind.SUB
 			self.next()
+			kind = NodeKind.SUB
 			node = BinaryNode(kind, token, NumNode(0, token), self.primary())
 			return node
 		if self.is_current("+"):
@@ -374,28 +403,28 @@ class NodeParser:
 			node: Node = self.expr()
 			self.check_syntax(")", "括弧が閉じられていません。")
 			self.next()
-		else:
-			if self.current().kind == TokenKind.NUM:
-				token: Token = self.current()
-				num: int = int(self.current().string)
-				self.next()
-				node = NumNode(num, token)
-			elif self.current().kind == TokenKind.IDENT:
-				token: Token = self.current()
-				name: str = self.current().string
-				if name in self.lvar_offsets:
-					offset: int = self.lvar_offsets[name]
-				else:
-					self.max_local_var_offset += 8
-					offset: int = self.max_local_var_offset
-					self.lvar_offsets[name] = offset
-				self.next()
-				node = LocalVarNode(offset, token)
+			return node
+		if self.current().kind == TokenKind.NUM:
+			token: Token = self.current()
+			self.next()
+			num: int = int(token.string)
+			node = NumNode(num, token)
+			return node
+		if self.current().kind == TokenKind.IDENT:
+			token: Token = self.current()
+			self.next()
+			name: str = token.string
+			if name in self.lvar_offsets:
+				offset: int = self.lvar_offsets[name]
 			else:
-				self.error("不正な文です。")
-				# 前の関数で例外が投げられるはずだが、IDEが反応してくれないのでここでも投げる
-				raise Exception()
-		return node
+				self.max_local_var_offset += 8
+				offset: int = self.max_local_var_offset
+				self.lvar_offsets[name] = offset
+			node = LocalVarNode(offset, token)
+			return node
+		self.error("不正な文です。")
+		# 前の関数で例外が投げられるはずだが、IDEが反応してくれないのでここでも投げる
+		raise Exception()
 
 
 class Function:
