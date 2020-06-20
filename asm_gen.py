@@ -1,4 +1,5 @@
-from node_parser import NodeKind, Node, NumNode, BinaryNode, LocalVarNode, Function, ReturnNode, IfNode, WhileNode, ForNode
+from node_parser import NodeKind, Node, NumNode, BinaryNode, LocalVarNode, Function, ReturnNode, IfNode, WhileNode, \
+	ForNode
 from token_parser import error_token
 from typing import List
 
@@ -117,7 +118,6 @@ class AssemblyGenerator:
 			asm += f"  jmp {begin_label}\n"
 			asm += f"{end_label}:\n"
 			return asm
-
 
 		if not isinstance(node, BinaryNode):
 			error_token(node.token, self.source, "未知のノードです。")

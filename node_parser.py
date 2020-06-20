@@ -96,17 +96,18 @@ class IfNode(Node):
 		return self.__dict__ == other.__dict__
 
 	def __repr__(self) -> str:
-		left = self.if_node.__repr__().replace("\n", "\n ")
-		right = self.else_node.__repr__().replace("\n", "\n ")
+		conditions = self.if_node.__repr__().replace("\n", "\n ")
+		if_node = self.if_node.__repr__().replace("\n", "\n ")
 		tree: str = ""
 		tree += f"{self.token}"
 		tree += f"IF (\n"
-		tree += f"  {self.conditions}\n"
+		tree += f" {conditions}\n"
 		tree += ")\n"
-		tree += f" {left}\n"
+		tree += f" {if_node}\n"
 		if self.else_node is not None:
+			else_node = self.else_node.__repr__().replace("\n", "\n ")
 			tree += f"ELSE"
-			tree += f" {right}"
+			tree += f" {else_node}"
 		return tree
 
 
@@ -122,10 +123,11 @@ class WhileNode(Node):
 
 	def __repr__(self) -> str:
 		loop = self.loop_node.__repr__().replace("\n", "\n ")
+		conditions = self.conditions.__repr__().replace("\n", "\n ")
 		tree: str = ""
 		tree += f"{self.token}"
-		tree += f"IF (\n"
-		tree += f"  {self.conditions}\n"
+		tree += f"WHILE (\n"
+		tree += f" {conditions}\n"
 		tree += ")\n"
 		tree += f" {loop}\n"
 		return tree
@@ -195,6 +197,10 @@ class NodeParser:
 	def is_current(self, string: str) -> bool:
 		return self.current().string == string
 
+	def check_syntax(self, string: str, message: str) -> None:
+		if not self.is_current(string):
+			self.error(message)
+
 	def error(self, message: str) -> None:
 		error_token(self.current(), self.source, message)
 
@@ -226,12 +232,10 @@ class NodeParser:
 		elif self.current().kind == TokenKind.IF:
 			token: Token = self.current()
 			self.next()
-			if not self.is_current("("):
-				self.error("不正な条件式です。")
+			self.check_syntax("(", "不正な条件式です。")
 			self.next()
 			conditions: Node = self.expr()
-			if not self.is_current(")"):
-				self.error("不正な条件式です。")
+			self.check_syntax(")", "不正な条件式です。")
 			self.next()
 			if_node: Node = self.stmt()
 			if self.current().kind == TokenKind.ELSE:
@@ -244,12 +248,10 @@ class NodeParser:
 		elif self.current().kind == TokenKind.WHILE:
 			token: Token = self.current()
 			self.next()
-			if not self.is_current("("):
-				self.error("不正な条件式です。")
+			self.check_syntax("(", "不正な条件式です。")
 			self.next()
 			conditions: Node = self.expr()
-			if not self.is_current(")"):
-				self.error("不正な条件式です。")
+			self.check_syntax(")", "不正な条件式です。")
 			self.next()
 			loop_node: Node = self.stmt()
 			node: Node = WhileNode(token, conditions, loop_node)
@@ -257,38 +259,30 @@ class NodeParser:
 		elif self.current().kind == TokenKind.FOR:
 			token: Token = self.current()
 			self.next()
-			if not self.is_current("("):
-				self.error("不正な条件式です。")
+			self.check_syntax("(", "不正な条件式です。")
 			self.next()
+			init: Optional[Node] = None
 			if not self.is_current(";"):
-				init: Optional[Node] = self.expr()
-			else:
-				init = None
-			if not self.is_current(";"):
-				self.error("不正な文です。")
+				init = self.expr()
+			self.check_syntax(";", "不正な文です。")
 			self.next()
+			conditions: Optional[Node] = None
 			if not self.is_current(";"):
-				condition: Optional[Node] = self.expr()
-			else:
-				condition = None
-			if not self.is_current(";"):
-				self.error("不正な文です。")
+				conditions = self.expr()
+			self.check_syntax(";", "不正な文です。")
 			self.next()
+			inc: Optional[Node] = None
 			if not self.is_current(")"):
-				inc: Optional[Node] = self.expr()
-			else:
-				inc = None
-			if not self.is_current(")"):
-				self.error("不正な条件式です。")
+				inc = self.expr()
+			self.check_syntax(")", "不正な条件式です。")
 			self.next()
 			loop_node: Node = self.stmt()
-			node: Node = ForNode(token, init, condition, inc, loop_node)
+			node: Node = ForNode(token, init, conditions, inc, loop_node)
 			return node
 		else:
 			node: Node = self.expr()
 
-		if not self.is_current(";"):
-			self.error(";が行末にありません")
+		self.check_syntax(";", ";が行末にありません")
 		self.next()
 		return node
 
@@ -378,8 +372,7 @@ class NodeParser:
 		if self.is_current("("):
 			self.next()
 			node: Node = self.expr()
-			if not self.is_current(")"):
-				self.error("括弧が閉じられていません。")
+			self.check_syntax(")", "括弧が閉じられていません。")
 			self.next()
 		else:
 			if self.current().kind == TokenKind.NUM:
