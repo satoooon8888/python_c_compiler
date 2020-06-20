@@ -16,13 +16,11 @@ class AssemblyGenerator:
 		asm = ""
 		if not isinstance(node, LocalVarNode):
 			error_token(node.token, self.source, "代入先が不正です。")
-		asm += "  mov rax, rbp\n"
-		asm += "  sub rax, {}\n".format(node.offset)
-		asm += "  push rax\n"
+		asm += f"  lea rax, [rbp - {node.offset}]\n"
 		return asm
 
 	@staticmethod
-	def gen_op_code(kind: NodeKind) -> str:
+	def gen_opcode(kind: NodeKind) -> str:
 		asm = ""
 		if kind == NodeKind.ADD:
 			asm += "  add rax, rdi\n"
@@ -49,28 +47,24 @@ class AssemblyGenerator:
 			asm += "  cmp rax, rdi\n"
 			asm += "  setle al\n"
 			asm += "  movzb rax, al\n"
-		asm += "  push rax\n"
 		return asm
 
 	def gen(self, node: Node) -> str:
 		asm = ""
 
 		if isinstance(node, NumNode):
-			asm += f"  push {node.val}\n"
+			asm += f"  mov rax, {node.val}\n"
 			return asm
 
 		if node.kind == NodeKind.LVAR:
 			asm += self.gen_lvar_addr(node)
-			asm += "  pop rax\n"
 			asm += "  mov rax, [rax]\n"
-			asm += "  push rax\n"
 			return asm
 
 		if node.kind == NodeKind.RETURN:
 			if not isinstance(node, ReturnNode):
-				error_token(node.token, self.source, "RETURNトークンがOneChildNode型でありません。")
-			asm += self.gen(node.child)
-			asm += "  pop rax\n"
+				error_token(node.token, self.source, "RETURNトークンがReturnNode型でありません。")
+			asm += self.gen(node.value)
 			asm += "  jmp .L.end\n"
 			return asm
 
@@ -78,7 +72,6 @@ class AssemblyGenerator:
 			if not isinstance(node, IfNode):
 				error_token(node.token, self.source, "IfトークンがIfNode型でありません。")
 			asm += self.gen(node.conditions)
-			asm += "  pop rax\n"
 			asm += "  cmp rax, 0\n"
 			end_label = self.create_label("L.endif")
 			if node.else_node is None:
@@ -100,18 +93,21 @@ class AssemblyGenerator:
 
 		if node.kind == NodeKind.ASSIGN:
 			asm += self.gen_lvar_addr(node.lhs)
+			asm += "  push rax\n"
 			asm += self.gen(node.rhs)
+			asm += "  push rax\n"
 			asm += "  pop rdi\n"
 			asm += "  pop rax\n"
 			asm += "  mov [rax], rdi\n"
-			asm += "  push rdi\n"
 			return asm
 
 		asm += self.gen(node.lhs)
+		asm += "  push rax\n"
 		asm += self.gen(node.rhs)
+		asm += "  push rax\n"
 		asm += "  pop rdi\n"
 		asm += "  pop rax\n"
-		asm += self.gen_op_code(node.kind)
+		asm += self.gen_opcode(node.kind)
 		return asm
 
 	def function(self, function: Function) -> str:

@@ -2,7 +2,7 @@ import enum
 from typing import List, Optional
 
 # 長い記号から順に
-reserved_symbol = [
+reserved_operator = [
 	"==",
 	"!=",
 	"<=",
@@ -115,31 +115,31 @@ def reserved_word_to_kind(word: str) -> Optional[TokenKind]:
 	return None
 
 
-def tokenize(input_str: str) -> List[Token]:
+def tokenize(source: str) -> List[Token]:
 	tokens: List[Token] = []
 
 	i: int = 0
-	while i < len(input_str):
+	while i < len(source):
 
-		match_string = match_with_words(input_str[i:], padding)
-		if match_string is not None:
+		match_padding = match_with_words(source[i:], padding)
+		if match_padding is not None:
 			i += 1
 			continue
 
-		match_string = match_with_words(input_str[i:], reserved_symbol)
-		if match_string is not None:
+		match_operator = match_with_words(source[i:], reserved_operator)
+		if match_operator is not None:
 			kind = TokenKind.RESERVED
-			token_str = match_string
+			token_str = match_operator
 			tokens.append(Token(kind, token_str, i))
-			i += len(match_string)
+			i += len(match_operator)
 			continue
 
-		if input_str[i].isdigit():
+		if source[i].isdigit():
 			kind = TokenKind.NUM
 			token_str = ""
 			allowed_num_string = "0123456789"
 			base = 10
-			match_base = match_with_words(input_str[i:], ["0x", "0b", "0o"])
+			match_base = match_with_words(source[i:], ["0x", "0b", "0o"])
 			token_index: int = i
 			if match_base is not None:
 				i += 2
@@ -152,37 +152,37 @@ def tokenize(input_str: str) -> List[Token]:
 				elif match_base == "0o":
 					allowed_num_string = "01234567"
 					base = 8
-			while i < len(input_str) and input_str[i] in allowed_num_string:
-				token_str += input_str[i]
+			while i < len(source) and source[i] in allowed_num_string:
+				token_str += source[i]
 				i += 1
 			if token_str == "":
-				error_with_place(i, 1, input_str, "無効な数値です。")
+				error_with_place(i, 1, source, "無効な数値です。")
 			token_str = str(int(token_str, base))
 			tokens.append(Token(kind, token_str, token_index))
 			continue
 
-		match_string = match_with_words(input_str[i:], reserved_word)
-		if match_string is not None:
-			kind = reserved_word_to_kind(match_string)
+		match_word = match_with_words(source[i:], reserved_word)
+		if match_word is not None:
+			kind = reserved_word_to_kind(match_word)
 			if kind is None:
-				error_with_place(i, len(match_string), input_str, "予約語が実装されていません。")
+				error_with_place(i, len(match_word), source, "予約語が実装されていません。")
 				raise Exception()
-			token_str = match_string
+			token_str = match_word
 			tokens.append(Token(kind, token_str, i))
 			i += len(token_str)
 			continue
 
-		if is_allowed_first_var_char(input_str[i]):
+		if is_allowed_first_var_char(source[i]):
 			kind = TokenKind.IDENT
 			token_str = ""
 			token_index: int = i
-			while i < len(input_str) and is_allowed_var_char(input_str[i]):
-				token_str += input_str[i]
+			while i < len(source) and is_allowed_var_char(source[i]):
+				token_str += source[i]
 				i += 1
 			tokens.append(Token(kind, token_str, token_index))
 			continue
 
-		error_with_place(i, 1, input_str, "解釈できません")
+		error_with_place(i, 1, source, "解釈できません")
 
 	kind = TokenKind.EOF
 	token_str = ""

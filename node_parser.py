@@ -69,16 +69,16 @@ class LocalVarNode(Node):
 
 
 class ReturnNode(Node):
-	def __init__(self, token: Token, child: Node):
+	def __init__(self, token: Token, value: Node):
 		super().__init__(NodeKind.RETURN, token)
-		self.child = child
+		self.value = value
 
 	def __eq__(self, other):
 		return self.__dict__ == other.__dict__
 
 	def __repr__(self) -> str:
 		tree: str = f"({self.kind}) {self.token}"
-		tree += f" {self.child}"
+		tree += f" {self.value}"
 		return tree
 
 
@@ -141,6 +141,12 @@ class NodeParser:
 	def current(self) -> Token:
 		return self.tokens[0]
 
+	def is_current(self, string: str) -> bool:
+		return self.current().string == string
+
+	def error(self, message: str) -> None:
+		error_token(self.current(), self.source, message)
+
 	# program = stmt*
 	# stmt = expr ";"
 	#        | "return" expr ";"
@@ -167,15 +173,13 @@ class NodeParser:
 		elif self.current().kind == TokenKind.IF:
 			token: Token = self.current()
 			self.next()
-			if self.current().string == "(":
-				self.next()
-			else:
-				error_token(self.current(), self.source, "不正な条件式です。")
+			if not self.is_current("("):
+				self.error("不正な条件式です。")
+			self.next()
 			conditions: Node = self.expr()
-			if self.current().string == ")":
-				self.next()
-			else:
-				error_token(self.current(), self.source, "不正な条件式です。")
+			if not self.is_current(")"):
+				self.error("不正な条件式です。")
+			self.next()
 			if_node: Node = self.stmt()
 			if self.current().kind == TokenKind.ELSE:
 				self.next()
@@ -187,10 +191,9 @@ class NodeParser:
 		else:
 			node: Node = self.expr()
 
-		if self.current().string == ";":
-			self.next()
-		else:
-			error_token(self.current(), self.source, ";が行末にありません")
+		if not self.is_current(";"):
+			self.error(";が行末にありません")
+		self.next()
 		return node
 
 	def expr(self) -> Node:
@@ -198,7 +201,7 @@ class NodeParser:
 
 	def assign(self) -> Node:
 		node: Node = self.equality()
-		if self.current().string == "=":
+		if self.is_current("="):
 			token: Token = self.current()
 			kind: NodeKind = NodeKind.ASSIGN
 			self.next()
@@ -264,21 +267,23 @@ class NodeParser:
 		return node
 
 	def unary(self) -> Node:
-		if self.current().string == "-":
+		if self.is_current("-"):
 			token: Token = self.current()
 			kind = NodeKind.SUB
 			self.next()
 			node = BinaryNode(kind, token, NumNode(0, token), self.primary())
 			return node
-		if self.current().string == "+":
+		if self.is_current("+"):
 			self.next()
 		node: Node = self.primary()
 		return node
 
 	def primary(self) -> Node:
-		if self.current().string == "(":
+		if self.is_current("("):
 			self.next()
 			node: Node = self.expr()
+			if not self.is_current(")"):
+				self.error("括弧が閉じられていません。")
 			self.next()
 		else:
 			if self.current().kind == TokenKind.NUM:
@@ -298,7 +303,7 @@ class NodeParser:
 				self.next()
 				node = LocalVarNode(offset, token)
 			else:
-				error_token(self.current(), self.source, "不正な文です。")
+				self.error("不正な文です。")
 				# 前の関数で例外が投げられるはずだが、IDEが反応してくれないのでここでも投げる
 				raise Exception()
 		return node
