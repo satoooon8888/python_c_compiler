@@ -121,7 +121,7 @@ class AssemblyGenerator:
 
 		if node.kind == NodeKind.BLOCK:
 			if not isinstance(node, BlockNode):
-				error_token(node.token, self.source, "WhileトークンがWhileNode型でありません。")
+				error_token(node.token, self.source, "BlockトークンがBlockNode型でありません。")
 			for node in node.nodes:
 				asm += self.gen(node)
 			return asm
