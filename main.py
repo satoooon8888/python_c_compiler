@@ -6,8 +6,8 @@ from asm_gen import asm_gen
 
 def compile_source(source: str) -> str:
 	tokens = tokenize(source)
-	nodes = node_parse(tokens, source)
-	return asm_gen([nodes], source)
+	function = node_parse(tokens, source)
+	return asm_gen([function], source)
 
 
 def main() -> None:

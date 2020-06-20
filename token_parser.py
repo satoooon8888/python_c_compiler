@@ -20,7 +20,9 @@ reserved_symbol = [
 ]
 
 reserved_word = [
-	"return"
+	"return",
+	"if",
+	"else"
 ]
 
 padding = [" ", "	", "\n"]
@@ -30,9 +32,12 @@ class TokenKind(enum.Enum):
 	RESERVED = enum.auto()  # 記号
 	IDENT = enum.auto()  # 識別子（変数）
 	NUM = enum.auto()  # 数値
-	RETURN = enum.auto()  # return文
 	EOF = enum.auto()  # プログラムの終端
 	INVALID = enum.auto()  # エラーの際に使う
+
+	RETURN = enum.auto()
+	IF = enum.auto()
+	ELSE = enum.auto()
 
 
 class Token:
@@ -100,6 +105,16 @@ def is_allowed_first_var_char(char: str):
 	)
 
 
+def reserved_word_to_kind(word: str) -> Optional[TokenKind]:
+	if word == "return":
+		return TokenKind.RETURN
+	if word == "if":
+		return TokenKind.IF
+	if word == "else":
+		return TokenKind.ELSE
+	return None
+
+
 def tokenize(input_str: str) -> List[Token]:
 	tokens: List[Token] = []
 
@@ -148,9 +163,8 @@ def tokenize(input_str: str) -> List[Token]:
 
 		match_string = match_with_words(input_str[i:], reserved_word)
 		if match_string is not None:
-			if match_string == "return":
-				kind = TokenKind.RETURN
-			else:
+			kind = reserved_word_to_kind(match_string)
+			if kind is None:
 				error_with_place(i, len(match_string), input_str, "予約語が実装されていません。")
 				raise Exception()
 			token_str = match_string

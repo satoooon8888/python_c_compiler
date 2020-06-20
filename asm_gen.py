@@ -1,4 +1,4 @@
-from node_parser import NodeKind, Node, NumNode, BinaryNode, LocalVarNode, Function, OneChildNode
+from node_parser import NodeKind, Node, NumNode, BinaryNode, LocalVarNode, Function, ReturnNode, IfNode
 from token_parser import error_token
 from typing import List
 
@@ -6,6 +6,11 @@ from typing import List
 class AssemblyGenerator:
 	def __init__(self, source: str):
 		self.source = source
+		self.label_counter = 0
+
+	def create_label(self, name=""):
+		self.label_counter += 1
+		return f".{name}__{self.label_counter}"
 
 	def gen_lvar_addr(self, node: Node) -> str:
 		asm = ""
@@ -62,13 +67,32 @@ class AssemblyGenerator:
 			return asm
 
 		if node.kind == NodeKind.RETURN:
-			if not isinstance(node, OneChildNode):
+			if not isinstance(node, ReturnNode):
 				error_token(node.token, self.source, "RETURNトークンがOneChildNode型でありません。")
 			asm += self.gen(node.child)
 			asm += "  pop rax\n"
-			asm += "  mov rsp, rbp\n"
-			asm += "  pop rbp\n"
-			asm += "  ret\n"
+			asm += "  jmp .L.end\n"
+			return asm
+
+		if node.kind == NodeKind.IF:
+			if not isinstance(node, IfNode):
+				error_token(node.token, self.source, "IfトークンがIfNode型でありません。")
+			asm += self.gen(node.conditions)
+			asm += "  pop rax\n"
+			asm += "  cmp rax, 0\n"
+			end_label = self.create_label("L.endif")
+			if node.else_node is None:
+				asm += f"  je {end_label}\n"
+				asm += self.gen(node.if_node)
+				asm += f"{end_label}:\n"
+			else:
+				else_label = self.create_label("L.else")
+				asm += f"  je {else_label}\n"
+				asm += self.gen(node.if_node)
+				asm += f"  jmp {end_label}\n"
+				asm += f"{else_label}:\n"
+				asm += self.gen(node.else_node)
+				asm += f"{end_label}:\n"
 			return asm
 
 		if not isinstance(node, BinaryNode):
@@ -92,14 +116,14 @@ class AssemblyGenerator:
 
 	def function(self, function: Function) -> str:
 		asm = ""
-		asm += "{}:".format(function.name)
+		asm += "{}:\n".format(function.name)
 		asm += "  push rbp\n"
 		asm += "  mov rbp, rsp\n"
 		offset: int = sum([function.lvar_offsets[name] for name in function.lvar_offsets])
 		asm += "  sub rsp, {}\n".format(offset)
 		for node in function.nodes:
 			asm += self.gen(node)
-			asm += "  pop rax\n"
+		asm += ".L.end:\n"
 		asm += "  mov rsp, rbp\n"
 		asm += "  pop rbp\n"
 		asm += "  ret\n"

@@ -1,6 +1,6 @@
 import enum
 from token_parser import Token, TokenKind, error_token
-from typing import List, Dict
+from typing import List, Dict, Optional
 from collections import deque
 
 
@@ -17,6 +17,7 @@ class NodeKind(enum.Enum):
 	LT = enum.auto()
 	LE = enum.auto()
 	RETURN = enum.auto()
+	IF = enum.auto()
 
 
 class Node:
@@ -67,9 +68,9 @@ class LocalVarNode(Node):
 		return f"[ebp - {self.offset:x}] {self.token}"
 
 
-class OneChildNode(Node):
-	def __init__(self, kind: NodeKind, token: Token, child: Node):
-		super().__init__(kind, token)
+class ReturnNode(Node):
+	def __init__(self, token: Token, child: Node):
+		super().__init__(NodeKind.RETURN, token)
 		self.child = child
 
 	def __eq__(self, other):
@@ -78,6 +79,32 @@ class OneChildNode(Node):
 	def __repr__(self) -> str:
 		tree: str = f"({self.kind}) {self.token}"
 		tree += f" {self.child}"
+		return tree
+
+
+class IfNode(Node):
+	def __init__(self, token: Token, conditions: Node, if_node: Node, else_node: Optional[Node]) -> None:
+		super().__init__(NodeKind.IF, token)
+		self.conditions = conditions
+		self.if_node: Node = if_node
+		self.else_node: Optional[Node] = else_node
+		self.token: Token = token
+
+	def __eq__(self, other: "LocalVarNode") -> bool:
+		return self.__dict__ == other.__dict__
+
+	def __repr__(self) -> str:
+		left = self.if_node.__repr__().replace("\n", "\n ")
+		right = self.else_node.__repr__().replace("\n", "\n ")
+		tree: str = ""
+		tree += f"{self.token}"
+		tree += f"IF (\n"
+		tree += f"  {self.conditions}\n"
+		tree += ")\n"
+		tree += f" {left}\n"
+		if self.else_node is not None:
+			tree += f"ELSE"
+			tree += f" {right}"
 		return tree
 
 
@@ -116,7 +143,8 @@ class NodeParser:
 
 	# program = stmt*
 	# stmt = expr ";"
-	#        | "return" expr ;
+	#        | "return" expr ";"
+	#        | "if" "(" expr ")" stmt ("else" stmt)?
 	# expr = assign
 	# assign = equality ("=" assign)?
 	# equality = relational (("==" | "!=") relational)*
@@ -135,9 +163,30 @@ class NodeParser:
 		if self.current().kind == TokenKind.RETURN:
 			token: Token = self.current()
 			self.next()
-			node: Node = OneChildNode(NodeKind.RETURN, token, self.expr())
+			node: Node = ReturnNode(token, self.expr())
+		elif self.current().kind == TokenKind.IF:
+			token: Token = self.current()
+			self.next()
+			if self.current().string == "(":
+				self.next()
+			else:
+				error_token(self.current(), self.source, "不正な条件式です。")
+			conditions: Node = self.expr()
+			if self.current().string == ")":
+				self.next()
+			else:
+				error_token(self.current(), self.source, "不正な条件式です。")
+			if_node: Node = self.stmt()
+			if self.current().kind == TokenKind.ELSE:
+				self.next()
+				else_node: Node = self.stmt()
+			else:
+				else_node: Optional[Node] = None
+			node: Node = IfNode(token, conditions, if_node, else_node)
+			return node
 		else:
 			node: Node = self.expr()
+
 		if self.current().string == ";":
 			self.next()
 		else:
