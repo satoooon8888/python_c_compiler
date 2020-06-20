@@ -1,5 +1,5 @@
 from node_parser import NodeKind, Node, NumNode, BinaryNode, LocalVarNode, Function, ReturnNode, IfNode, WhileNode, \
-	ForNode
+	ForNode, BlockNode
 from token_parser import error_token
 from typing import List
 
@@ -117,6 +117,13 @@ class AssemblyGenerator:
 			asm += self.gen(node.inc)
 			asm += f"  jmp {begin_label}\n"
 			asm += f"{end_label}:\n"
+			return asm
+
+		if node.kind == NodeKind.BLOCK:
+			if not isinstance(node, BlockNode):
+				error_token(node.token, self.source, "WhileトークンがWhileNode型でありません。")
+			for node in node.nodes:
+				asm += self.gen(node)
 			return asm
 
 		if not isinstance(node, BinaryNode):

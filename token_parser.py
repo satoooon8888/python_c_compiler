@@ -16,7 +16,9 @@ reserved_operator = [
 	"=",
 	"(",
 	")",
-	";"
+	";",
+	"{",
+	"}"
 ]
 
 reserved_word = [
